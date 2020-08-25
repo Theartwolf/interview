@@ -4,6 +4,7 @@ var bodyParser = require('body-parser');
 const {connection} = require('./db/mysql-connect.js');
 const { check_overlap_timings } = require('./checking-overlap-timings.js');
 const { get_participants } = require('./get-participants.js');
+const {getTime} = require('./getTime.js');
 
 var app = express();
 
@@ -31,23 +32,49 @@ app.get('/participants',(req,res)=>{
 
 //getting list of participants with time
 app.get('/participantsTime',(req,res)=>{
+    var participants = [];
+
+    //timeformat YYY-MM-DD HH:MM:SS
+    var time = String(getTime());
+    console.log("GivenTime",time);
+
+
+    sql = `select p.first_name, p.last_name, t.start_time, t.end_time 
+            from participants p
+            inner join temp_inter iv on p.par_id = iv.par_id 
+            inner join timings t on t.interview_id = iv.interview_id
+            and t.start_time > '${time}'`
+    connection.query(sql,(err, row, field)=>{
+        //row is the object containing query result
+        //participants in an array containing query result
+        if(err)
+            console.log("error",err);
+        for(i in row)
+            participants.push(row[i]);
+        res.send(participants);
+    });
     
 });
 
-//checking if time overlaps with existing interviews
+//checking if time overlaps with existing interviews 
+// If time is not overlapping then insert into DB
 app.post('/check', function (req, res) {
 
     var selectedParticipants = req.body.id;
-    var time = req.body.time;
-    for(var i=0;i<selectedParticipants.length;i++){
-        var sql = `select * 
-                    from interview it 
-                    inner join timings t on it.interview_id = t.interview_id and 
-                    par_id = ${selectedParticipants[i]}` 
-        connection.query(sql,(err,row,fields)=>{
-
-        });
+    if(selectedParticipants.length <= 2){
+        //throw error because atleast 3 candidates are required
+        return res.status(400).send({message:"Select atleast 3 Participants"}); 
     }
+    var time = req.body.time;
+    // for(var i=0;i<selectedParticipants.length;i++){
+    //     var sql = `select * 
+    //                 from interview it 
+    //                 inner join timings t on it.interview_id = t.interview_id and 
+    //                 par_id = ${selectedParticipants[i]}` 
+    //     connection.query(sql,(err,row,fields)=>{
+
+    //     });
+    // }
     res.end( JSON.stringify(req.body));
  })
 
