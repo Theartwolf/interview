@@ -83,11 +83,11 @@ app.post('/check', function (req, res) {
                 (t.start_time between '${time[0]}' and '${time[1]}'
                 or t.end_time between '${time[0]}' and '${time[1]}');`
     
-        connection.query(sql,(err,row)=>{
-            if(row.length > 0){
-                return res.send({message:"Participants not available"});
-            }
-        });
+    connection.query(sql,(err,row)=>{
+        if(row.length > 0){
+            return res.send({message:"Participants not available"});
+        }
+    });
 
     var tm = {
         start_time: time[0],
@@ -106,7 +106,7 @@ app.post('/check', function (req, res) {
         }
 
         connection.query("INSERT INTO interviews(par_id, interview_id) VALUES ?",[onlyId],(err,row,fields)=>{
-
+            return res.send({message: "Interview Scheduled"});
         });
     });
  })
@@ -125,13 +125,81 @@ app.post('/check', function (req, res) {
 //     });
 // });
 
-// app.post('/edit',(req,res)=>{
-//     var id = req.body.id;
-//     var startTime = req.body.startTime;
-//     var endTime = req.body.endTime
-//     sql = `select * from interviews iv 
-//             inner join timings t on t.interview_id = iv.interview_id`
-// });
+app.post('/edit',(req,res)=>{
+    // console.log(req.body.prevTime);
+    //prev[0].id, prev[0].startTime, prev[0].endTime
+    var prevTime = req.body.prevTime;
+    var newTime = req.body.newTime;
+    // if(prevTime.length < 1 || newTime.length != 2){
+    //     res.send({message: "Invalid input"});
+    // }
+    // var id = req.body.id;
+    // var startTime = req.body.startTime;
+    // var endTime = req.body.endTime
+    sql = `select * from interviews iv 
+            inner join timings t on t.interview_id = iv.interview_id
+            where iv.par_id = ${prevTime[0].id} and
+             t.start_time = '${prevTime[0].startTime}'
+             and t.end_time = '${prevTime[0].endTime}';`
+    connection.query(sql,(err,results)=>{
+        console.log("resulrs",results);
+        query = `select * from interviews where par_id = ${results[0].par_id}
+                and interview_id = ${results[0].interview_id};`
+        console.log("query",query);
+        connection.query(query,(err,selectrow)=>{
+            console.log("selectrow",selectrow);
+            sqlDelete = `delete from interviews where par_id = ${selectrow[0].par_id}
+                    and interview_id = ${selectrow[0].interview_id};`
+
+                connection.query(sqlDelete,(err,delrow)=>{
+                    var sqlQ = `select * from
+                    interviews iv inner join timings t on iv.interview_id = t.interview_id
+                    where par_id = ${prevTime[0].id}) and
+                    (t.start_time between '${newTime[0]}' and '${newTime[1]}'
+                    or t.end_time between '${newTime[0]}' and '${newTime[1]}');`
+        
+                    connection.query(sqlQ,(err,row)=>{
+
+                        if(row == undefined){
+                            checkQ = `select * from timings where start_time = '${newTime[0]}'
+                            and end_time = '${newTime[1]}'`
+                            connection.query(checkQ,(err,r)=>{
+                                if(r == undefined){
+                                    q = `insert into timings(start_time,end_time) values
+                                        (${newTime[0]},${newTime[1]})`
+                                    connection.query(q,(e,rr)=>{
+                                        
+                                    })
+                                    q=`select * from timings where start_time = '${newTime[0]}'
+                                    and end_time = '${end_time[0]}'`
+                                    connection.query(q,(e,rr)=>{
+                                        q = `insert into interviews(par_id,interview_id) values
+                                        (${prevTime[0].id},${rr.interview_id})`
+                                        connection.query(q,(e,rrr)=>{
+                                            return res.send({message: "Edit Sucessfull"});
+                                        })
+                                    })
+
+                                }else {
+                                    q = `insert into interviews(par_id,interview_id) values
+                                        (${prevTime[0].id},${r.interview_id})`
+                                    connection.query(q,(e,rr)=>{
+                                        return res.send({message: "Edit Sucessfull"});
+                                    })
+                                }
+                            });
+                            
+                        } else {
+                            sqlQuery = `insert into interviews(par_id,interview_id) values(${selectrow[0].par_id},${selectrow[0].interview_id})`
+                            connection.query(sqlQuery,(err,r)=>{
+                                return res.send({message:"Participants not available. Edit unsuccessful"});
+                            });
+                        }
+                    });
+            });
+        });        
+    });
+});
 
 
 // app.get('/create',(req, res)=>{
