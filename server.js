@@ -130,9 +130,9 @@ app.post('/edit',(req,res)=>{
     //prev[0].id, prev[0].startTime, prev[0].endTime
     var prevTime = req.body.prevTime;
     var newTime = req.body.newTime;
-    // if(prevTime.length < 1 || newTime.length != 2){
-    //     res.send({message: "Invalid input"});
-    // }
+    if(prevTime.length < 1){
+        res.send({message: "Invalid input"});
+    }
     // var id = req.body.id;
     // var startTime = req.body.startTime;
     // var endTime = req.body.endTime
@@ -142,16 +142,24 @@ app.post('/edit',(req,res)=>{
              t.start_time = '${prevTime[0].startTime}'
              and t.end_time = '${prevTime[0].endTime}';`
     connection.query(sql,(err,results)=>{
-        console.log("resulrs",results);
+        if(results.length == 0){
+            return res.send({message:"Unsuccessful Edit"});
+        }
+        // console.log("resulrs",results);
         query = `select * from interviews where par_id = ${results[0].par_id}
                 and interview_id = ${results[0].interview_id};`
-        console.log("query",query);
         connection.query(query,(err,selectrow)=>{
+            if(selectrow.length == 0){
+                return res.send({message:"Unsuccessful Edit"});
+            }
             console.log("selectrow",selectrow);
             sqlDelete = `delete from interviews where par_id = ${selectrow[0].par_id}
                     and interview_id = ${selectrow[0].interview_id};`
 
                 connection.query(sqlDelete,(err,delrow)=>{
+                    if(err){
+                        return res.send({message:"Unsuccessful Edit"});
+                    }
                     var sqlQ = `select * from
                     interviews iv inner join timings t on iv.interview_id = t.interview_id
                     where par_id = ${prevTime[0].id}) and
@@ -159,6 +167,9 @@ app.post('/edit',(req,res)=>{
                     or t.end_time between '${newTime[0]}' and '${newTime[1]}');`
         
                     connection.query(sqlQ,(err,row)=>{
+                        if(err){
+                            return res.send({message:"Unsuccessful Edit"});
+                        }
 
                         if(row == undefined){
                             checkQ = `select * from timings where start_time = '${newTime[0]}'
