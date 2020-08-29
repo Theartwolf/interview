@@ -1,10 +1,35 @@
 const express = require('express');
 const cors = require('cors')
+var nodemailer = require("nodemailer");
 var bodyParser = require('body-parser');
 const {connection} = require('./db/mysql-connect.js');
 const { check_overlap_timings } = require('./checking-overlap-timings.js');
 const { get_participants } = require('./get-participants.js');
 const {getTime} = require('./getTime.js');
+
+
+// var smtpTransport = nodemailer.createTransport(
+// "SMTP",{
+//   host: '',
+//   //  secureConnection: true,         // use SSL
+//   port: 25
+// });
+
+// let transport = nodemailer.createTransport({
+//     host: 'smtp.mailtrap.io',
+//     port: 2525,
+//     auth: {
+//        user: 'bansalvivek2323@gmail.com',
+//        pass: ''
+//     }
+// });
+var transport = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'testing01mail0101@gmail.com',
+      pass: 'Qwerty123#'
+    }
+  });
 
 var app = express();
 
@@ -93,6 +118,40 @@ app.post('/create', (req, res)=> {
                 return res.send({message:`${result[0].first_name} not available`});
             });
         } else {
+
+            //extracting email ids of participants
+            var emailQuery = `select email_id from participants where par_id in (${string_par_id});`
+            connection.query(emailQuery,(err,emailResult)=>{
+                // console.log("EMAIL",emailResult);
+                var emailIds = [];
+                for(i in emailResult){
+                    emailIds.push(emailResult[i].email_id);
+                }
+                // console.log("EMAILIDSSSSS",emailIds);
+                
+                emailIds.forEach((to, i , array)=> {
+
+                var msg = {
+                    from: "testing01mail0101@gmail.com", 
+                    subject: "Interview Timings", 
+                    text: `Hi, Your interview has been scheduled from ${time[0]} to ${time[1]} ` 
+                    // cc: "*******"   
+                }
+                msg.to = to;
+                transport.sendMail(msg, (err)=> {
+                    if (err) { 
+                      console.log('Sending to ' + to + ' failed: ' + err);
+                      return;
+                    } else { 
+                      console.log('Sent to ' + to);
+                    }
+                
+                    if (i === emailIds.length - 1) { msg.transport.close(); }
+                  });
+                });
+                // console.log("OUTSIDE OF FOREACH");
+            });
+
             
             var tm = {
                 start_time: time[0],
