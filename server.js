@@ -7,6 +7,7 @@ const { check_overlap_timings } = require('./checking-overlap-timings.js');
 const { get_participants } = require('./get-participants.js');
 const {getTime} = require('./getTime.js');
 
+var port = process.env.PORT || 3000;
 
 // var smtpTransport = nodemailer.createTransport(
 // "SMTP",{
@@ -29,7 +30,7 @@ var transport = nodemailer.createTransport({
       user: 'testing01mail0101@gmail.com',
       pass: 'Qwerty123#'
     }
-  });
+});
 
 var app = express();
 
@@ -286,7 +287,7 @@ app.get('/',(req,res) =>{
     // res.send("created");
 });
 
-app.listen(3000,()=>{
+app.listen(port,()=>{
     console.log("app is up on port 3000");
 });
 
